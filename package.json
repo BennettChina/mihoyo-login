@@ -1,0 +1,10 @@
+{
+  "name" : "mihoyo-login",
+  "version" : "1.0.0",
+  "dependencies" : {
+    "qrcode" : "^1.5.3"
+  },
+  "devDependencies" : {
+    "@types/qrcode" : "^1.5.2"
+  }
+}
