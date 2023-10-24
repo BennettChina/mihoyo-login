@@ -1,6 +1,6 @@
-import { ConfigType, OrderConfig } from "@modules/command";
-import { MessageScope } from "@modules/message";
-import { AuthLevel } from "@modules/management/auth";
+import { ConfigType, OrderConfig } from "@/modules/command";
+import { MessageScope } from "@/modules/message";
+import { AuthLevel } from "@/modules/management/auth";
 
 const login: OrderConfig = {
 	type: "order",

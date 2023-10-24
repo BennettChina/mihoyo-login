@@ -1,16 +1,15 @@
-import { BOT } from "@modules/bot";
-import { PluginSetting } from "@modules/plugin";
+import { definePlugin } from "@/modules/plugin";
 import cfgList from "./commands";
 
-export async function init( _bot: BOT ): Promise<PluginSetting> {
-	return {
-		pluginName: "mihoyo-login",
-		cfgList,
-		aliases: [ "米游社登录" ],
-		repo: {
-			owner: "BennettChina",
-			repoName: "mihoyo-login",
-			ref: "master"
-		}
+export default definePlugin( {
+	name: "miHoYo登录",
+	cfgList,
+	repo: {
+		owner: "BennettChina",
+		repoName: "mihoyo-login",
+		ref: "v3"
+	},
+	async mounted( params ) {
+		params.setAlias( [ "米游社登录" ] );
 	}
-}
+} )

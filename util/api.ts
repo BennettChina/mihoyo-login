@@ -1,10 +1,10 @@
 import axios from "axios";
-import { segment, Sendable } from "icqq";
-import { InputParameter } from "@modules/command";
+import { ForwardElem, segment, Sendable } from "@/modules/lib";
+import { InputParameter } from "@/modules/command";
 import { QRCodeToDataURLOptions, toDataURL } from "qrcode";
 import { scheduleJob } from "node-schedule";
-import { privateClass } from "#genshin/init";
-import { isPrivateMessage } from "@modules/message";
+import { privateClass } from "#/genshin/init";
+import { isPrivateMessage } from "@/modules/message";
 import {
 	accelerometer,
 	batteryStatus,
@@ -15,10 +15,10 @@ import {
 	magnetometer,
 	randomInt,
 	randomStr
-} from "#mihoyo-login/util/utils";
-import { delay } from "@modules/utils";
+} from "#/mihoyo-login/util/utils";
+import { sleep } from "@/utils/async";
 import bot from "ROOT";
-import { baseInfoPromise } from "#genshin/utils/promise";
+import { baseInfoPromise } from "#/genshin/utils/promise";
 
 enum Api {
 	mihoyo_login_qrcode_creat = "https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch",
@@ -102,12 +102,29 @@ export async function loginByQRCode( i: InputParameter ) {
 				
 				// 私聊时 Cookie 发送给用户，群聊仅提示
 				if ( isPrivateMessage( messageData ) ) {
-					const tips = segment.fake( client.uin, "登录完成，以下分别是 Cookie 和 Stoken，将会自动绑定", client.nickname );
-					const forwardMsg = await client.makeForwardMsg( [
-						tips,
-						segment.fake( client.uin, cookie, client.nickname ),
-						segment.fake( client.uin, stoken, client.nickname ),
-					], true );
+					const tips = "登录完成，以下分别是 Cookie 和 Stoken，将会自动绑定";
+					const info = await client.getLoginInfo();
+					const nodes = [
+						{
+							uin: client.uin,
+							name: info.data.nickname,
+							content: tips
+						},
+						{
+							uin: client.uin,
+							name: info.data.nickname,
+							content: cookie
+						},
+						{
+							uin: client.uin,
+							name: info.data.nickname,
+							content: stoken
+						}
+					]
+					const forwardMsg: ForwardElem = {
+						type: "forward",
+						messages: nodes
+					}
 					await sendMessage( forwardMsg );
 				} else {
 					await messageData.reply( "登录完成，Cookie 和 Stoken，将会自动绑定" );
@@ -172,14 +189,15 @@ async function creatQRCode( device: string, {
 	
 	if ( isPrivateMessage( messageData ) ) {
 		sendMessage( [ "请使用米游社扫码登录", qr_code ] ).then( async ( ret ) => {
-			await delay( 300000 );
-			await client.deleteMsg( ret.message_id );
+			await sleep( 300000 );
+			await client.recallMessage( ret );
 		} );
 	} else {
-		messageData.reply( [ "请使用米游社扫码登录", qr_code ] ).then( async ( ret ) => {
-			await delay( 300000 );
-			await client.deleteMsg( ret.message_id );
-		} )
+		const content = [ segment.reply( messageData.message_id ), "请使用米游社扫码登录", qr_code ];
+		sendMessage( content ).then( async ( ret ) => {
+			await sleep( 300000 );
+			await client.recallMessage( ret );
+		} );
 	}
 	
 	return ticket;

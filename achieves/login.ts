@@ -1,6 +1,6 @@
-import { InputParameter } from "@modules/command";
-import { loginByQRCode } from "#mihoyo-login/util/api";
+import { defineDirective, InputParameter } from "@/modules/command";
+import { loginByQRCode } from "#/mihoyo-login/util/api";
 
-export async function main( i: InputParameter ): Promise<void> {
+export default defineDirective( "order", async ( i: InputParameter ) => {
 	await loginByQRCode( i );
-}
+} );
