@@ -3,7 +3,7 @@
   "author" : "Bennett",
   "private" : true,
   "license" : "MIT",
-  "version" : "2.0.1",
+  "version" : "2.0.2",
   "description" : "米哈游登录插件 为 Adachi-BOT 衍生插件，用于获取米游社登录后的 Token 。",
   "dependencies" : {
     "qrcode" : "^1.5.3"

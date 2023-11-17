@@ -113,20 +113,24 @@ export async function loginByQRCode( i: InputParameter ) {
 				if ( isPrivateMessage( messageData ) ) {
 					const tips = "登录完成，以下分别是 Cookie 和 Stoken，将会自动绑定";
 					const info = await client.getLoginInfo();
+					if ( info.retcode !== 0 || !info.data.nickname ) {
+						logger.warn( "获取 Bot 的昵称失败:", info.wording );
+					}
+					const nickname = info.data.nickname || undefined;
 					const nodes = [
 						{
 							uin: client.uin,
-							name: info.data.nickname,
+							name: nickname,
 							content: tips
 						},
 						{
 							uin: client.uin,
-							name: info.data.nickname,
+							name: nickname,
 							content: cookie
 						},
 						{
 							uin: client.uin,
-							name: info.data.nickname,
+							name: nickname,
 							content: stoken
 						}
 					]
