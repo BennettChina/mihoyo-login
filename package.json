@@ -1,6 +1,10 @@
 {
   "name" : "mihoyo-login",
-  "version" : "1.0.0",
+  "author" : "Bennett",
+  "private" : true,
+  "license" : "MIT",
+  "version" : "1.0.1",
+  "description" : "米哈游登录插件 为 Adachi-BOT 衍生插件，用于获取米游社登录后的 Token 。",
   "dependencies" : {
     "qrcode" : "^1.5.3"
   },

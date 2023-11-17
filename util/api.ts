@@ -18,7 +18,8 @@ import {
 } from "#mihoyo-login/util/utils";
 import { delay } from "@modules/utils";
 import bot from "ROOT";
-import { baseInfoPromise } from "#genshin/utils/promise";
+import { getLtoken } from "#genshin/utils/promise";
+import { checkMysCookieInvalid } from "#genshin/utils/cookie";
 
 enum Api {
 	mihoyo_login_qrcode_creat = "https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch",
@@ -45,7 +46,7 @@ const HEADERS = {
 	"User-Agent": "okhttp/4.8.0"
 }
 
-const app_id = 8;
+const app_id = 4;
 
 export async function loginByQRCode( i: InputParameter ) {
 	const { sendMessage, logger, client, messageData } = i;
@@ -93,12 +94,20 @@ export async function loginByQRCode( i: InputParameter ) {
 				getCookie( data.uid, data.token )
 			] ).then( async ( [ token_data, cookie_data ] ) => {
 				// 获取 stoken 和 cookie_token
-				const cookie = `ltoken=${ token_data.token.token }; ltuid=${ token_data.user_info.aid }; account_id=${ token_data.user_info.aid }; cookie_token=${ cookie_data.cookie_token };`;
-				const stoken = `stoken=${ token_data.token.token }; stuid=${ token_data.user_info.aid }; mid=${ token_data.user_info.aid }`;
+				const ltoken = await getLtoken( token_data.token.token, token_data.user_info.mid );
+				const cookie = `ltoken=${ ltoken }; ltuid=${ token_data.user_info.aid }; account_id=${ token_data.user_info.aid }; cookie_token=${ cookie_data.cookie_token };`;
+				const stoken = `stoken=${ token_data.token.token }; stuid=${ token_data.user_info.aid }; mid=${ token_data.user_info.mid }`;
 				// 添加Cookie到私人服务中
-				await baseInfoPromise( messageData.user_id, data.uid, cookie );
-				const game_uid = await bot.redis.getString( `silvery-star.user-querying-id-${ messageData.user_id }` );
-				await privateClass.addPrivate( game_uid, cookie, messageData.user_id, stoken );
+				const rawCookie = cookie + stoken;
+				if ( logger.isDebugEnabled() ) {
+					logger.debug( "raw_cookie:", rawCookie );
+				}
+				const {
+					uid: game_uid,
+					stoken: _stoken,
+					cookie: _cookie
+				} = await checkMysCookieInvalid( rawCookie );
+				await privateClass.addPrivate( game_uid, _cookie, messageData.user_id, _stoken );
 				
 				// 私聊时 Cookie 发送给用户，群聊仅提示
 				if ( isPrivateMessage( messageData ) ) {
@@ -159,13 +168,13 @@ async function creatQRCode( device: string, {
 	}
 	const options: QRCodeToDataURLOptions = {
 		errorCorrectionLevel: 'H',
-		margin: 1,
+		margin: 2,
 		color: {
 			dark: '#000',
 			light: '#FFF',
 		}
 	}
-	
+	logger.info( url );
 	let image = await toDataURL( url, options );
 	image = image.replace( "data:image/png;base64,", "" );
 	const qr_code = segment.image( `base64://${ image }` );
