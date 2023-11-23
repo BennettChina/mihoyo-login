@@ -23,7 +23,7 @@
 在 `Adachi-BOT/src/plugins` 目录执行下面的命令。
 
 ```shell
-git clone https://ghproxy.com/https://github.com/BennettChina/mihoyo-login.git
+git clone https://mirror.ghproxy.com/https://github.com/BennettChina/mihoyo-login.git
 ```
 
 ## 🎁 更新方式
@@ -51,4 +51,5 @@ git pull
 - [TimeRainStarSky/TRSS-Plugin](https://github.com/TimeRainStarSky/TRSS-Plugin/blob/main/Apps/miHoYoLogin.js)
   参考了时雨的登录功能。
 - [yoimiya-kokomi/Miao-Yunzai](https://github.com/yoimiya-kokomi/Miao-Yunzai/blob/master/plugins/genshin/model/mys/apiTool.js)
-  参考喵崽的获取 `device_fp` 参数接口。 
+  参考喵崽的获取 `device_fp` 参数接口。
+- 参考[UIGF-org/mihoyo-api-collect](https://github.com/UIGF-org/mihoyo-api-collect) 整理的 API 文档。
