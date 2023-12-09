@@ -116,21 +116,21 @@ export async function loginByQRCode( i: InputParameter ) {
 					if ( info.retcode !== 0 || !info.data.nickname ) {
 						logger.warn( "获取 Bot 的昵称失败:", info.wording );
 					}
-					const nickname = info.data.nickname || undefined;
+					const nickname = info.data.nickname || "BOT";
 					const nodes = [
 						{
-							uin: client.uin,
-							name: nickname,
+							user_id: client.uin,
+							nickname,
 							content: tips
 						},
 						{
-							uin: client.uin,
-							name: nickname,
+							user_id: client.uin,
+							nickname,
 							content: cookie
 						},
 						{
-							uin: client.uin,
-							name: nickname,
+							user_id: client.uin,
+							nickname,
 							content: stoken
 						}
 					]
