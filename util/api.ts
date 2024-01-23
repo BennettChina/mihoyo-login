@@ -19,7 +19,7 @@ import {
 import { sleep } from "@/utils/async";
 import bot from "ROOT";
 import { getLtoken } from "#/genshin/utils/promise";
-import { checkMysCookieInvalid } from "#/genshin/utils/cookie";
+import { getBaseInfo } from "#/genshin/utils/api";
 
 enum Api {
 	mihoyo_login_qrcode_creat = "https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch",
@@ -102,12 +102,27 @@ export async function loginByQRCode( i: InputParameter ) {
 				if ( logger.isDebugEnabled() ) {
 					logger.debug( "raw_cookie:", rawCookie );
 				}
+				
+				/* 验证Cookie的有效性 */
 				const {
-					uid: game_uid,
-					stoken: _stoken,
-					cookie: _cookie
-				} = await checkMysCookieInvalid( rawCookie );
-				await privateClass.addPrivate( game_uid, _cookie, messageData.user_id, _stoken );
+					retcode,
+					message,
+					data
+				} = await getBaseInfo( 100000001, parseInt( token_data.user_info.aid ), rawCookie );
+				
+				if ( retcode !== 0 ) {
+					throw message;
+				} else if ( !data.list || data.list.length === 0 ) {
+					throw "未查询到角色数据，请检查米哈游通行证（非UID）是否有误或是否设置角色信息公开";
+				}
+				
+				const genshinInfo = data.list.find( el => el.gameId === 2 );
+				if ( !genshinInfo ) {
+					throw "未查询到角色数据，请检查米哈游通行证（非UID）是否有误或是否设置角色信息公开";
+				}
+				const game_uid: string = genshinInfo.gameRoleId;
+				
+				await privateClass.addPrivate( game_uid, rawCookie, messageData.user_id, stoken );
 				
 				// 私聊时 Cookie 发送给用户，群聊仅提示
 				if ( isPrivateMessage( messageData ) ) {
