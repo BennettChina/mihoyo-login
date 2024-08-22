@@ -1,4 +1,4 @@
-import { ConfigType, OrderConfig } from "@/modules/command";
+import { ConfigType, EnquireConfig, OrderConfig } from "@/modules/command";
 import { MessageScope } from "@/modules/message";
 import { AuthLevel } from "@/modules/management/auth";
 
@@ -14,4 +14,16 @@ const login: OrderConfig = {
 	detail: "扫码登录米游社，用来获取登录的Token。"
 };
 
-export default <ConfigType[]>[ login ];
+const captchaLogin: EnquireConfig = {
+	type: "enquire",
+	cmdKey: "miHoYo-login.captcha-login",
+	desc: [ "验证码登录米游社", "" ],
+	headers: [ "验证码登录" ],
+	scope: MessageScope.Private,
+	auth: AuthLevel.User,
+	timeout: 600,
+	main: "achieves/captcha-login",
+	detail: "验证码登录米游社，用来获取登录的Token。"
+}
+
+export default <ConfigType[]>[ login, captchaLogin ];

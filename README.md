@@ -42,9 +42,29 @@ git pull
 
 ## 🧰 指令列表
 
-| 指令名      | 参数 | 描述             |
-|----------|----|----------------|
-| `#login` | 无  | 扫码登录米游社获取Token |
+| 指令名          | 参数                           | 描述                         |
+|--------------|------------------------------|----------------------------|
+| `#登录米游社`     | 无                            | 扫码登录米游社获取Cookie(不包含SToken) |
+| `#验证码登录` ｜ 无 | 短信验证码登录米游社获取Cookie(包含SToken) |
+
+## 配置参数
+
+```yaml
+captcha:
+    # 手动处理人机验证码的地址
+    viewUrl: ""
+    # 获取手动处理验证码结果的API地址
+    apiUrl: ""
+alias:
+    - 米游社登录
+```
+
+### 打码服务
+
+项目提供了使用 Vercel 部署的在线地址以及 Render 部署的 API 服务，流量高也可自行部署以下服务。
+
+- [gt-manual](https://github.com/BennettChina/gt-manual)
+- [awesome-api](https://github.com/BennettChina/awesome-api)
 
 ## 参考案例
 

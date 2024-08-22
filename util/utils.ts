@@ -1,13 +1,4 @@
-import { Md5 } from "md5-typescript";
-
-export function ds( data: string ): string {
-	// PROD salt
-	const n: string = "JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS";
-	const t = Date.now() / 1000 | 0;
-	const r = randomStr( 6 );
-	const h = Md5.init( `salt=${ n }&t=${ t }&r=${ r }&b=${ data }&q=` );
-	return `${ t },${ r },${ h }`;
-}
+import { randomBytes } from "crypto";
 
 export function getMiHoYoUuid(): string {
 	let t: string[] = [];
@@ -71,4 +62,75 @@ function randomString( length: number, seed: string ): string {
 		const randNum = Math.floor( Math.random() * seed.length );
 		return seed[randNum];
 	} ).join( "" );
+}
+
+export function random_canvas(): string {
+	const rand_png = Uint8Array.from( [
+		...randomBytes( 2 ),
+		0x00, 0x00, 0x00, 0x00,
+		73, 69, 78, 68,
+		0x00, 0xE0A0, 0x00, 0x2000
+	] )
+	return Buffer.from( rand_png ).toString( 'base64' );
+}
+
+export function getPlugins( size: number ): string[] {
+	const plugins = [
+		"PDF Viewer",
+		"Chrome PDF Viewer",
+		"Chromium PDF Viewer",
+		"Microsoft Edge PDF Viewer",
+		"WebKit built-in PDF"
+	]
+	
+	if ( size >= plugins.length ) {
+		return plugins;
+	}
+	return plugins.slice( 0, size - plugins.length );
+}
+
+/**
+ * 随机产生一个偶数
+ * @param min {number} 最小值
+ * @param max {number} 最大值
+ * @return {number} 偶数
+ */
+export function randomEvenNum( min: number, max: number ): number {
+	// 确保范围内至少有一个偶数
+	if ( min % 2 !== 0 ) {
+		min += 1;
+	}
+	if ( max % 2 !== 0 ) {
+		max -= 1;
+	}
+	// 如果调整后min大于max，说明范围内没有偶数
+	if ( min > max ) {
+		throw new Error( 'No even numbers in the given range.' );
+	}
+	
+	// 随机生成一个偶数
+	const range = ( max - min ) / 2 + 1;
+	return min + 2 * Math.floor( Math.random() * range );
+}
+
+export function transformCookie( cookie: string ): Record<string, string>;
+
+export function transformCookie( cookie: Record<string, string> ): string;
+
+export function transformCookie( cookie: string | Record<string, string> ): Record<string, string> | string {
+	if ( typeof cookie === "string" ) {
+		return decodeURIComponent( cookie ).split( ";" )
+			.filter( item => !!item && item.trim().length > 0 )
+			.reduce( ( acc, item ) => {
+				const delimiter = item.indexOf( '=' );
+				const key = item.substring( 0, delimiter ).trim();
+				acc[key] = item.substring( delimiter + 1 ).trim();
+				return acc;
+			}, {} );
+	}
+	return Object.entries( cookie )
+		.map( ( [ k, v ] ) => {
+			return `${ k }=${ v }`;
+		} )
+		.join( ";" );
 }
