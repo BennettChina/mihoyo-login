@@ -9,6 +9,8 @@ import { InputParameter } from "@/modules/command";
 import platform from "platform";
 import { getBaseInfo } from "#/genshin/utils/api";
 import { privateClass } from "#/genshin/init";
+import { DeviceData, MiHoYoData } from "#/mihoyo-login/util/types";
+import { Md5 } from "md5-typescript";
 
 type QRCodeResult = {
 	status: string;
@@ -26,13 +28,15 @@ type DeviceInfo = {
 }
 
 export class MiHoYoLogin {
+	private readonly deviceDBKey: string = "adachi.miHoYo.";
 	private readonly context: InputParameter;
-	private readonly userAgent: UserAgent;
-	private readonly deviceId: string;
-	private readonly lifecycleId: string;
-	private readonly seedId: string;
-	private readonly seedTime: string;
+	private userAgent: UserAgent;
+	private deviceId: string;
+	private lifecycleId: string;
+	private seedId: string;
+	private seedTime: string;
 	private deviceFp: string;
+	private dbKey: string = "adachi.miHoYo.data.";
 	
 	constructor( input: InputParameter ) {
 		this.context = input;
@@ -57,7 +61,7 @@ export class MiHoYoLogin {
 	 * 仅能获取 Ltoken 和 Cookie Token
 	 */
 	public async loginByQRCode() {
-		const { logger, messageData, sendMessage, client } = this.context;
+		const { logger, messageData, sendMessage } = this.context;
 		// 注册客户端信息，获取device_fp
 		await this.getDeviceFp();
 		
@@ -86,12 +90,11 @@ export class MiHoYoLogin {
 			}
 			
 			if ( !cookies ) throw new Error( "登录失败，请使用反馈功能向BOT管理反馈问题。" );
-			logger.info( `[米游社登录] ${ status }:`, cookies, ":", user_info );
 			
 			// 发个消息提示用户，如果被抢码可以知道被谁抢的。
 			sendMsg( `二维码已被[${ user_info.aid }(UID)]扫描。` );
 			
-			const rawCookie = cookies.map( ck => ck.split( ";" )[0] ).join( ";" )
+			const rawCookie = cookies.map( ck => ck.split( ";" )[0] ).join( ";" );
 			
 			/* 验证Cookie的有效性 */
 			const {
@@ -106,51 +109,55 @@ export class MiHoYoLogin {
 				throw "未查询到角色数据，请检查米哈游通行证（非UID）是否有误或是否设置角色信息公开";
 			}
 			
+			let hasGenshin = true;
+			const userId = messageData.user_id;
 			const genshinInfo = data.list.find( el => el.gameId === 2 );
-			if ( !genshinInfo ) {
-				throw "未查询到角色数据，请检查米哈游通行证（非UID）是否有误或是否设置角色信息公开";
-			}
-			const game_uid: string = genshinInfo.gameRoleId;
-			
-			await privateClass.addPrivate( game_uid, rawCookie, messageData.user_id );
-			
-			// 私聊时 Cookie 发送给用户，群聊仅提示
-			if ( isPrivateMessage( messageData ) ) {
-				const tips = "登录完成，以下是你的 Cookie，将会自动绑定";
-				const info = await client.getLoginInfo();
-				if ( info.retcode !== 0 || !info.data.nickname ) {
-					logger.warn( "获取 Bot 的昵称失败:", info.wording );
-				}
-				const nickname = info.data.nickname || "BOT";
-				const nodes = [
-					{
-						user_id: client.uin,
-						nickname,
-						content: tips
-					},
-					{
-						user_id: client.uin,
-						nickname,
-						content: rawCookie
-					}
-				]
-				const forwardMsg: ForwardElem = {
-					type: "forward",
-					messages: nodes
-				}
-				try {
-					await sendMessage( forwardMsg );
-				} catch ( err ) {
-					logger.error( "[米哈游登录]转发类型消息发送失败:", err );
-					await sendMessage( "登录完成，Cookie 将会自动绑定" );
-				}
+			if ( genshinInfo ) {
+				const game_uid: string = genshinInfo.gameRoleId;
+				await privateClass.addPrivate( game_uid, rawCookie, userId );
 			} else {
-				await messageData.reply( "登录完成，Cookie 将会自动绑定" );
+				hasGenshin = false;
 			}
+			
+			await this.sendCookie( rawCookie, hasGenshin );
+			
+			// 把设备信息保存下来
+			const deviceData: DeviceData = {
+				userAgent: this.userAgent.toString(),
+				deviceId: this.deviceId,
+				deviceFp: this.deviceFp,
+				lifecycleId: this.lifecycleId,
+				seedId: this.seedId,
+				seedTime: this.seedTime
+			}
+			await this.context.redis.setHash( this.deviceDBKey, deviceData );
+			
+			// 保存用户CK等数据 (数据格式不局限于原神的数据，更泛用一些)
+			const uid = user_info.aid;
+			const k = `${ userId }:${ uid }`;
+			this.dbKey = `${ this.dbKey }${ Md5.init( k ) }`;
+			const userData: MiHoYoData = {
+				games: JSON.stringify( data.list ),
+				cookie: rawCookie,
+				uid,
+				userId
+			};
+			await this.context.redis.setHash( this.dbKey, userData );
+			return;
 		}
 	}
 	
 	async getDeviceFp() {
+		const data: DeviceData = ( await this.context.redis.getHash( this.deviceDBKey ) ) as DeviceData;
+		if ( data.deviceFp ) {
+			this.deviceFp = data.deviceFp;
+			this.deviceId = data.deviceId;
+			this.lifecycleId = data.lifecycleId;
+			this.seedId = data.seedId;
+			this.seedTime = data.seedTime;
+			return;
+		}
+		
 		const { platform, pluginsLength, vendor, viewportWidth, viewportHeight } = this.userAgent.data;
 		const plugins = getPlugins( pluginsLength );
 		const ratio = `${ randomEvenNum( 2, 8 ) }`;
@@ -187,6 +194,44 @@ export class MiHoYoLogin {
 		};
 		
 		this.deviceFp = await getDeviceFp( this.deviceId, this.seedId, this.seedTime, JSON.stringify( ext_fields ), this.deviceFp );
+	}
+	
+	private async sendCookie( cookie: string, hasGenshin: boolean ) {
+		const { client, logger, sendMessage, messageData } = this.context;
+		// 私聊时 Cookie 发送给用户，群聊仅提示
+		const not_found: string = "未找到你的原神数据无法自动绑定。";
+		if ( isPrivateMessage( messageData ) ) {
+			const tips = `登录完成，以下是你的 Cookie ，${ hasGenshin ? "将会自动绑定" : not_found }`;
+			const info = await client.getLoginInfo();
+			if ( info.retcode !== 0 || !info.data.nickname ) {
+				logger.warn( "获取 Bot 的昵称失败:", info.wording );
+			}
+			const nickname = info.data.nickname || "BOT";
+			const nodes = [
+				{
+					user_id: client.uin,
+					nickname,
+					content: tips
+				},
+				{
+					user_id: client.uin,
+					nickname,
+					content: cookie
+				}
+			]
+			const forwardMsg: ForwardElem = {
+				type: "forward",
+				messages: nodes
+			}
+			try {
+				await sendMessage( forwardMsg );
+			} catch ( err ) {
+				logger.error( "[米哈游登录]转发类型消息发送失败:", err );
+				await sendMessage( `登录完成，${ hasGenshin ? "Cookie 将会自动绑定" : not_found }` );
+			}
+		} else {
+			await messageData.reply( `登录完成，${ hasGenshin ? "Cookie 将会自动绑定" : not_found }` );
+		}
 	}
 	
 	private async createQRCode() {

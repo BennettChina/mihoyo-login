@@ -7,3 +7,19 @@ export interface GameRole {
 	level: number;
 	regionName: string;
 }
+
+export type DeviceData = {
+	userAgent: string;
+	deviceId: string;
+	deviceFp: string;
+	lifecycleId: string;
+	seedId: string;
+	seedTime: string;
+}
+
+export type MiHoYoData = {
+	userId: string | number;
+	uid: string | number;
+	cookie: string;
+	games: string;
+}

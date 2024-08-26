@@ -18,24 +18,13 @@ import { privateClass } from "#/genshin/init";
 import { isPrivateMessage } from "@/modules/message";
 import { ForwardElem } from "@/modules/lib";
 import { Md5 } from "md5-typescript";
-import { GameRole } from "#/mihoyo-login/util/types";
+import { DeviceData, GameRole, MiHoYoData } from "#/mihoyo-login/util/types";
 import { encrypt } from "#/mihoyo-login/util/crypto";
-
-type MiHoYoData = {
-	userAgent: string;
-	deviceId: string;
-	deviceFp: string;
-	lifecycleId: string;
-	seedId: string;
-	seedTime: string;
-	games: string;
-	cookie: string;
-}
 
 export class MiHoYoCaptchaLogin {
 	
 	private static readonly INSTANCE_MAP: Map<number, MiHoYoCaptchaLogin> = new Map<number, MiHoYoCaptchaLogin>();
-	private readonly dbKey: string = "adachi.miHoYo.";
+	private readonly deviceDBKey: string = "adachi.miHoYo.";
 	private readonly context: InputParameter;
 	private userAgent: UserAgent;
 	private deviceId: string;
@@ -44,6 +33,7 @@ export class MiHoYoCaptchaLogin {
 	private seedTime: string;
 	private deviceFp: string;
 	private actionType: string = "login_by_mobile_captcha";
+	private dbKey: string = "adachi.miHoYo.data.";
 	private mobile: string = "";
 	
 	private constructor( input: InputParameter ) {
@@ -58,7 +48,7 @@ export class MiHoYoCaptchaLogin {
 		this.lifecycleId = getMiHoYoUuid();
 		this.seedId = getMiHoYoRandomStr( 16 );
 		this.seedTime = `${ Date.now() }`;
-		this.dbKey = `${ this.dbKey }${ Md5.init( this.context.messageData.user_id ) }`;
+		this.deviceDBKey = `${ this.deviceDBKey }${ Md5.init( this.context.messageData.user_id ) }`;
 	}
 	
 	public static getInstance( input: InputParameter ): MiHoYoCaptchaLogin {
@@ -101,11 +91,9 @@ export class MiHoYoCaptchaLogin {
 		};
 		const { login_ticket, token: { token }, user_info: { aid, mid } } = await loginByCaptcha( body, headers );
 		const rawCookie = `stuid=${ aid };stoken=${ token };mid=${ mid };login_ticket=${ login_ticket }`;
-		this.context.logger.info( rawCookie );
 		const ltoken = await getLTokenBySToken( rawCookie, this.getAccountHeader() );
 		const { cookie_token } = await getCookieAccountInfoBySToken( rawCookie, this.getAccountHeader() );
 		const cookie = `ltoken=${ ltoken };ltuid=${ aid };cookie_token=${ cookie_token };account_id=${ aid };${ rawCookie }`;
-		this.context.logger.info( cookie );
 		
 		/* 验证Cookie的有效性 */
 		let hasGenshin = true;
@@ -122,17 +110,26 @@ export class MiHoYoCaptchaLogin {
 		await this.sendCookie( cookie, hasGenshin );
 		
 		// 把设备信息保存下来
-		const data = {
+		const data: DeviceData = {
 			userAgent: this.userAgent.toString(),
 			deviceId: this.deviceId,
 			deviceFp: this.deviceFp,
 			lifecycleId: this.lifecycleId,
 			seedId: this.seedId,
-			seedTime: this.seedTime,
-			games: JSON.stringify( gameRoles ),
-			cookie
+			seedTime: this.seedTime
 		}
-		await this.context.redis.setHash( this.dbKey, data );
+		await this.context.redis.setHash( this.deviceDBKey, data );
+		
+		// 保存用户CK等数据 (数据格式不局限于原神的数据，更泛用一些)
+		const k = `${ userId }:${ aid }`;
+		this.dbKey = `${ this.dbKey }${ Md5.init( k ) }`;
+		const userData: MiHoYoData = {
+			games: JSON.stringify( gameRoles ),
+			cookie,
+			uid: aid,
+			userId
+		};
+		await this.context.redis.setHash( this.dbKey, userData );
 	}
 	
 	private async createCaptcha( mobile: string, aigis_data?: string ): Promise<void> {
@@ -260,7 +257,7 @@ export class MiHoYoCaptchaLogin {
 	}
 	
 	private async getDeviceFp(): Promise<void> {
-		const data: MiHoYoData = ( await this.context.redis.getHash( this.dbKey ) ) as MiHoYoData;
+		const data: DeviceData = ( await this.context.redis.getHash( this.deviceDBKey ) ) as DeviceData;
 		if ( data.deviceFp ) {
 			this.deviceFp = data.deviceFp;
 			this.deviceId = data.deviceId;
