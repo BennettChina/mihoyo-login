@@ -9,7 +9,7 @@ import { InputParameter } from "@/modules/command";
 import platform from "platform";
 import { getBaseInfo } from "#/genshin/utils/api";
 import { privateClass } from "#/genshin/init";
-import { DeviceData, MiHoYoData } from "#/mihoyo-login/util/types";
+import { DeviceData, GameRole, MiHoYoData } from "#/mihoyo-login/util/types";
 import { Md5 } from "md5-typescript";
 
 type QRCodeResult = {
@@ -61,7 +61,7 @@ export class MiHoYoLogin {
 	 * 仅能获取 Ltoken 和 Cookie Token
 	 */
 	public async loginByQRCode() {
-		const { logger, messageData, sendMessage } = this.context;
+		const { messageData, sendMessage } = this.context;
 		// 注册客户端信息，获取device_fp
 		await this.getDeviceFp();
 		
@@ -132,12 +132,21 @@ export class MiHoYoLogin {
 			}
 			await this.context.redis.setHash( this.deviceDBKey, deviceData );
 			
+			const games: GameRole[] = data.list.map( item => ( {
+				gameId: item.gameId,
+				gameName: item["gameName"],
+				uid: item.gameRoleId,
+				nickname: item.nickname,
+				region: item.region,
+				level: item.level,
+				regionName: item.regionName
+			} ) )
 			// 保存用户CK等数据 (数据格式不局限于原神的数据，更泛用一些)
 			const uid = user_info.aid;
 			const k = `${ userId }:${ uid }`;
 			this.dbKey = `${ this.dbKey }${ Md5.init( k ) }`;
 			const userData: MiHoYoData = {
-				games: JSON.stringify( data.list ),
+				games: JSON.stringify( games ),
 				cookie: rawCookie,
 				uid,
 				userId
