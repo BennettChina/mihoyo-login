@@ -133,7 +133,6 @@ export class MiHoYoCaptchaLogin {
 	}
 	
 	private async createCaptcha( mobile: string, aigis_data?: string ): Promise<void> {
-		console.log( this.getAccountHeader() )
 		this.mobile = mobile;
 		const body = { area_code: encrypt( "+86" ), mobile: encrypt( mobile ) };
 		const _ds = ds2( "account", body );

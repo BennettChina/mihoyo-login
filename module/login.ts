@@ -46,6 +46,7 @@ export class MiHoYoLogin {
 		this.lifecycleId = getMiHoYoRandomStr( 10 );
 		this.seedId = getMiHoYoRandomStr( 16 );
 		this.seedTime = `${ Date.now() }`;
+		this.deviceDBKey = `${ this.deviceDBKey }${ Md5.init( this.context.messageData.user_id ) }`;
 	}
 	
 	get plat(): DeviceInfo {
