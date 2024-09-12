@@ -170,9 +170,9 @@ export class MiHoYoCaptchaLogin {
 		_url.searchParams.append( "new_captcha", new_captcha );
 		_url.searchParams.append( "success", success );
 		const content = _url.toString();
-		await this.context.sendMessage( "触发风控，需要你处理下人机验证。" );
-		await this.context.sendMessage( content );
+		const id = await this.context.sendMessage( [ "触发风控，需要你处理下人机验证。\n", content ] );
 		await sleep( 90 * 1000 );
+		this.context.client.recallMessage( id ).then();
 		
 		const { geetest_validate, geetest_seccode, geetest_challenge } = await this.get_validate( challenge );
 		
