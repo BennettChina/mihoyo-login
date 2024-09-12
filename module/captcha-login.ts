@@ -171,10 +171,8 @@ export class MiHoYoCaptchaLogin {
 		_url.searchParams.append( "success", success );
 		const content = _url.toString();
 		const id = await this.context.sendMessage( [ "触发风控，需要你处理下人机验证。\n", content ] );
-		await sleep( 90 * 1000 );
-		this.context.client.recallMessage( id ).then();
-		
 		const { geetest_validate, geetest_seccode, geetest_challenge } = await this.get_validate( challenge );
+		this.context.client.recallMessage( id ).then();
 		
 		const _aigis = session_id + ";" + Buffer.from( JSON.stringify( {
 			geetest_challenge: geetest_challenge,
@@ -186,15 +184,29 @@ export class MiHoYoCaptchaLogin {
 	}
 	
 	private async get_validate( challenge: string ) {
-		const { geetest_challenge, geetest_validate, geetest_seccode } = await getValidate( challenge );
-		if ( !geetest_validate ) {
-			return Promise.reject( "未获取到验证结果" );
+		let logged = false;
+		for ( let i = 0; i < 24; i++ ) {
+			try {
+				await sleep( 5000 );
+				const { geetest_challenge, geetest_validate, geetest_seccode } = await getValidate( challenge );
+				if ( !geetest_validate ) {
+					continue;
+				}
+				return {
+					geetest_challenge,
+					geetest_validate,
+					geetest_seccode
+				}
+			} catch ( err ) {
+				if ( err === "未设置 API 服务的地址无法获取到人机验证结果。" ) {
+					throw err;
+				}
+				if ( !logged ) {
+					this.context.logger.info( err );
+				}
+			}
 		}
-		return {
-			geetest_challenge,
-			geetest_validate,
-			geetest_seccode
-		}
+		throw "获取人机验证结果超时";
 	}
 	
 	private async sendCookie( cookie: string, hasGenshin: boolean ) {
