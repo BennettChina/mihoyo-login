@@ -26,10 +26,10 @@ export default defineDirective( "enquire", async ( input: InputParameter ) => {
 			
 			if ( /^\d{6}$/.test( data ) ) {
 				await captchaLogin.loginByCaptcha( data );
-				return true;
 			}
 			
 			MiHoYoCaptchaLogin.removeInstance( input.messageData.user_id );
+			return true;
 		} catch ( error: any ) {
 			logger.error( error );
 			const tips = error?.message || typeof error === "string" ? error : "未知错误";

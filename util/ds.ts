@@ -2,14 +2,15 @@ import { Md5 } from "md5-typescript";
 import { randomStr } from "#/mihoyo-login/util/utils";
 import { urlParamsParse } from "@/utils/url";
 
-type DSType = "account" | "bbs" | "game" | "sign_in";
-
 const salt = {
 	account: "JwYDpKvLj6MrMqqYU6jTKF17KNO2PXoS",// PROD
 	bbs: "WGtruoQrwczmsjLOPXzJLnaAYycsLavx",// K2
+	lk2: "YaROXkMnnbaQzjOmGPDmDKvpcavlZbli",// LK2
 	game: "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs",// 4X
 	sign_in: "t0qEgfub6cvueAPgR5m9aQWWVciEer7v"// 6X
 }
+
+type DSType = keyof typeof salt;
 
 export const bbs_version = "2.73.1";
 

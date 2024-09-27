@@ -3,6 +3,7 @@ import { randomStr, transformCookie } from "#/mihoyo-login/util/utils";
 import bot from "ROOT";
 import { config } from "#/mihoyo-login/init";
 import { ds, ds2 } from "#/mihoyo-login/util/ds";
+import { SaveDevice } from "#/mihoyo-login/util/types";
 
 enum Api {
 	mihoyo_login_qrcode_creat = "https://passport-api.miyoushe.com/account/ma-cn-passport/web/createQRLogin",
@@ -15,7 +16,9 @@ enum Api {
 	getLTokenBySToken = "https://passport-api.mihoyo.com/account/auth/api/getLTokenBySToken",
 	getCookieAccountInfoBySToken = "https://passport-api.mihoyo.com/account/auth/api/getCookieAccountInfoBySToken",
 	userApiLogin = "https://bbs-api.miyoushe.com/user/api/login",
-	getGameRecordCard = "https://api-takumi-record.mihoyo.com/game_record/card/api/getGameRecordCard"
+	getGameRecordCard = "https://api-takumi-record.mihoyo.com/game_record/card/api/getGameRecordCard",
+	deviceLogin = "https://bbs-api.miyoushe.com/apihub/api/deviceLogin",
+	saveDevice = "https://bbs-api.mihoyo.com/apihub/api/saveDevice"
 }
 
 const HEADERS = {
@@ -233,7 +236,7 @@ export async function loginApi( cookie: string, headers: Record<string, string> 
 		headers: {
 			...headers,
 			"Cookie": cookie,
-			"DS": ds2( "bbs", data )
+			"DS": ds2( "lk2", data )
 		}
 	} )
 	
@@ -261,5 +264,39 @@ export async function getGameRecordCard( uid: string | number, cookie: string, h
 		return Promise.reject( response.data.message );
 	}
 	
+	return response.data.data;
+}
+
+export async function deviceLogin( body: SaveDevice, cookie: string, headers: Record<string, string> ) {
+	const { stoken, stuid, mid, login_ticket } = transformCookie( cookie );
+	cookie = transformCookie( { stuid, stoken, mid, login_ticket } );
+	
+	const response = await axios.post( Api.deviceLogin, body, {
+		headers: {
+			...headers,
+			Cookie: cookie,
+			DS: ds2( 'lk2', body )
+		}
+	} );
+	if ( response.data.retcode !== 0 ) {
+		throw new Error( response.data.message );
+	}
+	return response.data.data;
+}
+
+export async function saveDevice( body: SaveDevice, cookie: string, headers: Record<string, string> ) {
+	const { stoken, stuid, mid, login_ticket } = transformCookie( cookie );
+	cookie = transformCookie( { stuid, stoken, mid, login_ticket } );
+	
+	const response = await axios.post( Api.saveDevice, body, {
+		headers: {
+			...headers,
+			Cookie: cookie,
+			DS: ds2( 'lk2', body )
+		}
+	} );
+	if ( response.data.retcode !== 0 ) {
+		throw new Error( response.data.message );
+	}
 	return response.data.data;
 }

@@ -4,12 +4,14 @@ import UserAgent from "user-agents";
 import platform from "platform";
 import {
 	createCaptcha,
+	deviceLogin,
 	getCookieAccountInfoBySToken,
 	getDeviceFp,
 	getGameRecordCard,
 	getLTokenBySToken,
 	getValidate,
-	loginByCaptcha
+	loginByCaptcha,
+	saveDevice
 } from "#/mihoyo-login/util/api";
 import { config } from "#/mihoyo-login/init";
 import { sleep } from "@/utils/async";
@@ -18,7 +20,7 @@ import { privateClass } from "#/genshin/init";
 import { isPrivateMessage } from "@/modules/message";
 import { ForwardElem } from "@/modules/lib";
 import { Md5 } from "md5-typescript";
-import { DeviceData, GameRole, MiHoYoData } from "#/mihoyo-login/util/types";
+import { DeviceData, GameRole, MiHoYoData, SaveDevice } from "#/mihoyo-login/util/types";
 import { encrypt } from "#/mihoyo-login/util/crypto";
 
 export class MiHoYoCaptchaLogin {
@@ -35,6 +37,7 @@ export class MiHoYoCaptchaLogin {
 	private actionType: string = "login_by_mobile_captcha";
 	private dbKey: string = "adachi.miHoYo.data.";
 	private mobile: string = "";
+	private cookie: string = "";
 	
 	private constructor( input: InputParameter ) {
 		this.context = input;
@@ -77,7 +80,6 @@ export class MiHoYoCaptchaLogin {
 	}
 	
 	public async loginByCaptcha( captcha: string ) {
-		console.log( this.getAccountHeader() )
 		const body = {
 			captcha,
 			area_code: encrypt( "+86" ),
@@ -123,6 +125,7 @@ export class MiHoYoCaptchaLogin {
 		// 保存用户CK等数据 (数据格式不局限于原神的数据，更泛用一些)
 		const k = `${ userId }:${ aid }`;
 		this.dbKey = `${ this.dbKey }${ Md5.init( k ) }`;
+		this.cookie = cookie;
 		const userData: MiHoYoData = {
 			games: JSON.stringify( gameRoles ),
 			cookie,
@@ -130,6 +133,22 @@ export class MiHoYoCaptchaLogin {
 			userId
 		};
 		await this.context.redis.setHash( this.dbKey, userData );
+		
+		this.deviceLogin().catch( reason => this.context.logger.error( "[验证码登录] [登录设备]", reason ) );
+	}
+	
+	public async deviceLogin(): Promise<void> {
+		const header = this.getHeader();
+		const body: SaveDevice = {
+			device_id: this.deviceId,
+			platform: "iOS",
+			device_name: header["x-rpc-device_model"],
+			app_version: bbs_version,
+			os_version: header["x-rpc-sys_version"],
+			registration_id: getMiHoYoRandomStr( 19 )
+		};
+		await deviceLogin( body, this.cookie, header );
+		await saveDevice( body, this.cookie, header );
 	}
 	
 	private async createCaptcha( mobile: string, aigis_data?: string ): Promise<void> {
@@ -170,7 +189,7 @@ export class MiHoYoCaptchaLogin {
 		_url.searchParams.append( "new_captcha", new_captcha );
 		_url.searchParams.append( "success", success );
 		const content = _url.toString();
-		const id = await this.context.sendMessage( [ "触发风控，需要你处理下人机验证。\n", content ] );
+		const id = await this.context.sendMessage( [ "请打开地址并完成验证。\n", content ] );
 		const { geetest_validate, geetest_seccode, geetest_challenge } = await this.get_validate( challenge );
 		this.context.client.recallMessage( id ).then();
 		
@@ -202,6 +221,7 @@ export class MiHoYoCaptchaLogin {
 					throw err;
 				}
 				if ( !logged ) {
+					logged = true;
 					this.context.logger.info( err );
 				}
 			}
@@ -334,6 +354,25 @@ export class MiHoYoCaptchaLogin {
 			"x-rpc-client_type": "2",
 			"x-rpc-app_id": "bll8iq97cem8"
 		};
+	}
+	
+	private getHeader(): Record<string, string> {
+		const plat = platform.parse( this.userAgent.toString() );
+		return {
+			"x-rpc-verify_key": "bll8iq97cem8",
+			"x-rpc-device_fp": this.deviceFp,
+			"x-rpc-client_type": "1",
+			"x-rpc-device_id": this.deviceId.toUpperCase(),
+			"x-rpc-channel": "appstore",
+			"x-rpc-device_model": "iPhone10,3",
+			"Referer": "https://app.mihoyo.com",
+			"x-rpc-device_name": "iPhone",
+			"x-rpc-h265_supported": "1",
+			"x-rpc-app_version": bbs_version,
+			"User-Agent": "Hyperion/461 CFNetwork/1410.1 Darwin/22.6.0",
+			"x-rpc-sys_version": plat.os?.version || "16.7.9",
+			"x-rpc-csm_source": "home",
+		}
 	}
 	
 	private getAccountHeader(): Record<string, string> {

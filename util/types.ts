@@ -23,3 +23,12 @@ export type MiHoYoData = {
 	cookie: string;
 	games: string;
 }
+
+export type SaveDevice = {
+	os_version: string;
+	device_name: string;
+	platform: string;
+	device_id: string;
+	registration_id: string;
+	app_version: string;
+}
