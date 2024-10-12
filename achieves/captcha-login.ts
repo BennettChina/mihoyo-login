@@ -8,7 +8,7 @@ export default defineDirective( "enquire", async ( input: InputParameter ) => {
 	if ( matchResult.status === "activate" ) {
 		await sendMessage( '免责声明：本服务通过你的手机号、验证码登录米游社获取其他私人服务所需的 Cookie，该操作可能会暴露你的个人隐私：手机号、Cookie。' +
 			'如仍要继续，请输入手机号 ，可输入「取消」退出本次服务，或等待 10 分钟后自动退出。' );
-		return false;
+		return;
 	}
 	
 	if ( matchResult.status === "confirm" ) {

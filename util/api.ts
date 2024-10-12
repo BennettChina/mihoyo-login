@@ -179,8 +179,6 @@ export async function getValidate( challenge: string ) {
 		}
 	} ).catch( reason => Promise.reject( reason.message || reason ) );
 	
-	bot.logger.info( "[getValidate]", response.data )
-	
 	if ( response.data.code !== 0 ) {
 		return Promise.reject( response.data.message );
 	}
