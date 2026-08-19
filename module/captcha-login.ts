@@ -183,11 +183,18 @@ export class MiHoYoCaptchaLogin {
 			return Promise.reject( "未设置打码服务地址" );
 		}
 		const _url = new URL( url )
-		const { gt, challenge, new_captcha, success } = JSON.parse( data );
+		const { gt, challenge, new_captcha, success, use_v4, risk_type } = JSON.parse( data );
 		_url.searchParams.append( "gt", gt );
-		_url.searchParams.append( "challenge", challenge );
-		_url.searchParams.append( "new_captcha", new_captcha );
-		_url.searchParams.append( "success", success );
+		if ( challenge ) {
+			_url.searchParams.append( "challenge", challenge );
+		}
+		if ( use_v4 ) {
+			_url.searchParams.append( "use_v4", use_v4 );
+			_url.searchParams.append( "risk_type", risk_type );
+		} else {
+			_url.searchParams.append( "new_captcha", new_captcha );
+			_url.searchParams.append( "success", success );
+		}
 		const content = _url.toString();
 		const id = await this.context.sendMessage( [ "请打开地址并完成验证。\n", content ] );
 		const { geetest_validate, geetest_seccode, geetest_challenge } = await this.get_validate( challenge );
