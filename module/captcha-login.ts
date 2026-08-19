@@ -197,7 +197,7 @@ export class MiHoYoCaptchaLogin {
 		}
 		const content = _url.toString();
 		const id = await this.context.sendMessage( [ "请打开地址并完成验证。\n", content ] );
-		const { geetest_validate, geetest_seccode, geetest_challenge } = await this.get_validate( challenge );
+		const { geetest_validate, geetest_seccode, geetest_challenge } = await this.get_validate( challenge || gt );
 		this.context.client.recallMessage( id ).then();
 		
 		const _aigis = session_id + ";" + Buffer.from( JSON.stringify( {
