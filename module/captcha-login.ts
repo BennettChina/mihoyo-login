@@ -20,7 +20,7 @@ import { privateClass } from "#/genshin/init";
 import { isPrivateMessage } from "@/modules/message";
 import { ForwardElem } from "@/modules/lib";
 import { Md5 } from "md5-typescript";
-import { DeviceData, GameRole, MiHoYoData, SaveDevice } from "#/mihoyo-login/util/types";
+import { DeviceData, GameRole, GeetestValidate, MiHoYoData, SaveDevice } from "#/mihoyo-login/util/types";
 import { encrypt } from "#/mihoyo-login/util/crypto";
 
 export class MiHoYoCaptchaLogin {
@@ -197,32 +197,35 @@ export class MiHoYoCaptchaLogin {
 		}
 		const content = _url.toString();
 		const id = await this.context.sendMessage( [ "请打开地址并完成验证。\n", content ] );
-		const { geetest_validate, geetest_seccode, geetest_challenge } = await this.get_validate( challenge || gt );
+		const validate = await this.get_validate( challenge || gt, use_v4 );
 		this.context.client.recallMessage( id ).then();
 		
-		const _aigis = session_id + ";" + Buffer.from( JSON.stringify( {
-			geetest_challenge: geetest_challenge,
-			geetest_seccode: geetest_seccode || geetest_validate + "|jordan",
-			geetest_validate: geetest_validate
-		} ) ).toString( "base64" )
+		const geetestData = "pass_token" in validate ? validate : {
+			geetest_challenge: validate.geetest_challenge,
+			geetest_seccode: validate.geetest_seccode || validate.geetest_validate + "|jordan",
+			geetest_validate: validate.geetest_validate
+		};
+		const _aigis = session_id + ";" + Buffer.from( JSON.stringify( geetestData ) ).toString( "base64" )
 		
 		await this.createCaptcha( mobile, _aigis );
 	}
 	
-	private async get_validate( challenge: string ) {
+	private async get_validate( challenge: string, use_v4: boolean ): Promise<GeetestValidate> {
 		let logged = false;
 		for ( let i = 0; i < 24; i++ ) {
 			try {
 				await sleep( 5000 );
-				const { geetest_challenge, geetest_validate, geetest_seccode } = await getValidate( challenge );
-				if ( !geetest_validate ) {
+				const data = await getValidate( challenge );
+				if ( use_v4 ) {
+					if ( !( "pass_token" in data ) || !data.pass_token ) {
+						continue;
+					}
+					return data;
+				}
+				if ( !( "geetest_validate" in data ) || !data.geetest_validate ) {
 					continue;
 				}
-				return {
-					geetest_challenge,
-					geetest_validate,
-					geetest_seccode
-				}
+				return data;
 			} catch ( err ) {
 				if ( err === "未设置 API 服务的地址无法获取到人机验证结果。" ) {
 					throw err;

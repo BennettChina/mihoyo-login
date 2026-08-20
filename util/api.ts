@@ -3,7 +3,7 @@ import { randomStr, transformCookie } from "#/mihoyo-login/util/utils";
 import bot from "ROOT";
 import { config } from "#/mihoyo-login/init";
 import { ds, ds2 } from "#/mihoyo-login/util/ds";
-import { SaveDevice } from "#/mihoyo-login/util/types";
+import { GeetestValidate, SaveDevice } from "#/mihoyo-login/util/types";
 
 enum Api {
 	mihoyo_login_qrcode_creat = "https://passport-api.miyoushe.com/account/ma-cn-passport/web/createQRLogin",
@@ -169,7 +169,7 @@ export async function loginByCaptcha( body: Record<string, string>, headers: Rec
 	return resp.data.data;
 }
 
-export async function getValidate( challenge: string ) {
+export async function getValidate( challenge: string ): Promise<GeetestValidate> {
 	const url = config.captcha.apiUrl;
 	if ( !url ) return Promise.reject( "未设置 API 服务的地址无法获取到人机验证结果。" );
 	

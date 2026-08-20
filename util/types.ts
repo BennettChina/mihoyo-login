@@ -32,3 +32,19 @@ export type SaveDevice = {
 	registration_id: string;
 	app_version: string;
 }
+
+export type GeetestValidate = GeetestValidateV3 | GeetestValidateV4;
+
+export type GeetestValidateV3 = {
+	geetest_challenge: string;
+	geetest_validate: string;
+	geetest_seccode?: string;
+}
+
+export type GeetestValidateV4 = {
+	captcha_id: string;
+	lot_number: string;
+	pass_token: string;
+	gen_time: string;
+	captcha_output: string;
+}
