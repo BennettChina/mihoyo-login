@@ -200,7 +200,14 @@ export class MiHoYoCaptchaLogin {
 		const validate = await this.get_validate( challenge || gt, use_v4 );
 		this.context.client.recallMessage( id ).then();
 		
-		const geetestData = "pass_token" in validate ? validate : {
+		const geetestData = "pass_token" in validate ? {
+			userInfo: JSON.stringify( { session_id } ),
+			pass_token: validate.pass_token,
+			captcha_output: validate.captcha_output,
+			lot_number: validate.lot_number,
+			captcha_id: validate.captcha_id,
+			gen_time: validate.gen_time
+		} : {
 			geetest_challenge: validate.geetest_challenge,
 			geetest_seccode: validate.geetest_seccode || validate.geetest_validate + "|jordan",
 			geetest_validate: validate.geetest_validate
