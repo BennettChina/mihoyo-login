@@ -47,4 +47,5 @@ export type GeetestValidateV4 = {
 	pass_token: string;
 	gen_time: string;
 	captcha_output: string;
+	userInfo: string;
 }

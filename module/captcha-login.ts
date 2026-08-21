@@ -188,26 +188,23 @@ export class MiHoYoCaptchaLogin {
 		if ( challenge ) {
 			_url.searchParams.append( "challenge", challenge );
 		}
+		const userInfo: string = JSON.stringify( { session_id } );
 		if ( use_v4 ) {
 			_url.searchParams.append( "use_v4", use_v4 );
 			_url.searchParams.append( "risk_type", risk_type );
+			_url.searchParams.append( "userInfo", userInfo );
 		} else {
 			_url.searchParams.append( "new_captcha", new_captcha );
 			_url.searchParams.append( "success", success );
+			_url.searchParams.append( "session_id", session_id );
 		}
 		const content = _url.toString();
 		const id = await this.context.sendMessage( [ "请打开地址并完成验证。\n", content ] );
-		const validate = await this.get_validate( challenge || gt, use_v4 );
+		const key = `${ session_id }:${ gt }`;
+		const validate = await this.get_validate( key, use_v4 );
 		this.context.client.recallMessage( id ).then();
 		
-		const geetestData = "pass_token" in validate ? {
-			userInfo: JSON.stringify( { session_id } ),
-			pass_token: validate.pass_token,
-			captcha_output: validate.captcha_output,
-			lot_number: validate.lot_number,
-			captcha_id: validate.captcha_id,
-			gen_time: validate.gen_time
-		} : {
+		const geetestData = "pass_token" in validate ? validate : {
 			geetest_challenge: validate.geetest_challenge,
 			geetest_seccode: validate.geetest_seccode || validate.geetest_validate + "|jordan",
 			geetest_validate: validate.geetest_validate
